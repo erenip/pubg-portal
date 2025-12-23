@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Not Defteri</title>
+  <style>
+    :root {
+      --bg: #0f1216;
+      --fg: #e6e6e6;
+      --muted: #9aa3ad;
+      --card: #171b21;
+      --accent: #ffb703;
+      --accent-2: #219ebc;
+      --border: #2a3139;
+    }
+    .light {
+      --bg: #f7f9fc;
+      --fg: #0f1216;
+      --muted: #5b6672;
+      --card: #ffffff;
+      --accent: #ff8f00;
+      --accent-2: #1976d2;
+      --border: #e3e8ef;
+    }
+    * { box-sizing: border-box }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .bar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      padding: 10px;
+      align-items: center;
+    }
+    .bar input[type="search"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      outline: none;
+    }
+    .btn {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      cursor: pointer;
+    }
+    .btn.primary { background: var(--accent); color: #111; border: none; }
+    .btn.ghost { background: transparent; }
+    .wrap {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; }
+      .sidebar { order: 2; }
+      .editor { order: 1; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    .sidebar {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 10px;
+    }
+    .note-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .note-item:hover { border-color: var(--border); }
+    .note-title { font-weight: 600; }
+    .note-meta { font-size: 12px; color: var(--muted); }
+    .tags {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+    }
+    .tag {
+      font-size: 12px; padding: 4px 8px; border-radius: 999px;
+      background: #1f2430; color: #cbd5e1; border: 1px solid var(--border);
+    }
+    .editor {
+      display: grid; grid-template-rows: auto 1fr auto; min-height: 60vh;
+    }
+    .editor-head {
+      display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .editor-head input {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--fg);
+    }
+    .editor-area {
+      padding: 12px;
+    }
+    textarea {
+      width: 100%; min-height: 40vh; resize: vertical;
+      padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--fg); line-height: 1.6;
+      outline: none;
+    }
+    .editor-foot {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px; border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 13px;
+    }
+    .empty {
+      padding: 16px; text-align: center; color: var(--muted);
+    }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .danger { background: #ef4444; color: #fff; border: none; }
+    .accent2 { background: var(--accent-2); color: #fff; border: none; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <input id="search" type="search" placeholder="Notlarda ara (başlık, içerik, etiket)..." />
+      <button id="newNote" class="btn primary">Yeni not</button>
+      <button id="toggleTheme" class="btn">Tema</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <aside class="sidebar card">
+      <div class="row" style="padding:8px;">
+        <button id="exportJSON" class="btn">Dışa aktar (JSON)</button>
+        <label class="btn ghost">
+          İçe aktar
+          <input id="importJSON" type="file" accept="application/json" class="hidden" />
+        </label>
+      </div>
+      <div id="list"></div>
+      <div id="emptyList" class="empty">Henüz not yok. “Yeni not” ile başlayabilirsin.</div>
+    </aside>
+
+    <section class="editor card">
+      <div class="editor-head">
+        <input id="title" type="text" placeholder="Başlık" />
+        <input id="tags" type="text" placeholder="Etiketler (virgülle)" />
+        <button id="save" class="btn accent2">Kaydet</button>
+        <button id="delete" class="btn danger">Sil</button>
+      </div>
+      <div class="editor-area">
+        <textarea id="content" placeholder="Not içeriği..."></textarea>
+      </div>
+      <div class="editor-foot">
+        <span id="status" class="muted">Hazır</span>
+        <div class="row">
+          <button id="exportTXT" class="btn">TXT indir</button>
+          <button id="exportPDF" class="btn">PDF indir</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Basit veri modeli
+    const storeKey = 'notes.v1';
+    let notes = loadNotes();
+    let currentId = null;
+    let autosaveTimer = null;
+
+    // Elemanlar
+    const el = {
+      search: document.getElementById('search'),
+      list: document.getElementById('list'),
+      emptyList: document.getElementById('emptyList'),
+      newNote: document.getElementById('newNote'),
+      toggleTheme: document.getElementById('toggleTheme'),
+      title: document.getElementById('title'),
+      tags: document.getElementById('tags'),
+      content: document.getElementById('content'),
+      save: document.getElementById('save'),
+      del: document.getElementById('delete'),
+      status: document.getElementById('status'),
+      exportJSON: document.getElementById('exportJSON'),
+      importJSON: document.getElementById('importJSON'),
+      exportTXT: document.getElementById('exportTXT'),
+      exportPDF: document.getElementById('exportPDF'),
+    };
+
+    // Tema
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const savedTheme = localStorage.getItem('notes.theme');
+    if (savedTheme === 'light' || (!savedTheme && prefersLight)) {
+      document.body.classList.add('light');
+    }
+    el.toggleTheme.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      localStorage.setItem('notes.theme', document.body.classList.contains('light') ? 'light' : 'dark');
+    });
+
+    // Listeyi çiz
+    renderList();
+
+    // Arama
+    el.search.addEventListener('input', () => renderList(el.search.value.trim().toLowerCase()));
+
+    // Yeni not
+    el.newNote.addEventListener('click', () => {
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const note = { id, title: 'Yeni Not', content: '', tags: [], createdAt: now, updatedAt: now };
+      notes.unshift(note);
+      currentId = id;
+      saveNotes();
+      renderList();
+      loadToEditor(note);
+      flash('Yeni not oluşturuldu');
+    });
+
+    // Kaydet
+    el.save.addEventListener('click', saveCurrent);
+
+    // Sil
+    el.del.addEventListener('click', () => {
+      if (!currentId) return;
+      const ok = confirm('Bu notu silmek istediğine emin misin?');
+      if (!ok) return;
+      notes = notes.filter(n => n.id !== currentId);
+      currentId = null;
+      saveNotes();
+      renderList();
+      clearEditor();
+      flash('Not silindi');
+    });
+
+    // Otomatik kaydet (debounce)
+    ['input', 'keyup', 'change'].forEach(evt => {
+      el.title.addEventListener(evt, scheduleAutosave);
+      el.tags.addEventListener(evt, scheduleAutosave);
+      el.content.addEventListener(evt, scheduleAutosave);
+    });
+
+    function scheduleAutosave() {
+      el.status.textContent = 'Değişiklikler var...';
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        saveCurrent(true);
+      }, 600);
+    }
+
+    function saveCurrent(silent = false) {
+      if (!currentId) return;
+      const note = notes.find(n => n.id === currentId);
+      if (!note) return;
+      note.title = el.title.value.trim() || 'Başlıksız';
+      note.content = el.content.value;
+      note.tags = el.tags.value.split(',').map(t => t.trim()).filter(Boolean);
+      note.updatedAt = Date.now();
+      saveNotes();
+      renderList();
+      if (!silent) flash('Kaydedildi');
+      el.status.textContent = 'Kaydedildi';
+    }
+
+    function renderList(query = '') {
+      el.list.innerHTML = '';
+      const filtered = notes.filter(n => {
+        const text = (n.title + ' ' + n.content + ' ' + (n.tags || []).join(' ')).toLowerCase();
+        return text.includes(query);
+      });
+      el.emptyList.style.display = filtered.length ? 'none' : 'block';
+
+      filtered.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'note-item';
+        item.innerHTML = `
+          <div>
+            <div class="note-title">${escapeHTML(n.title || 'Başlıksız')}</div>
+            <div class="note-meta">${formatDate(n.updatedAt)}</div>
+            <div class="tags">${(n.tags || []).map(t => `<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+          </div>
+          <div class="row">
+            <button class="btn" data-open="${n.id}">Aç</button>
+          </div>
+        `;
+        el.list.appendChild(item);
+        item.querySelector('[data-open]').addEventListener('click', () => {
+          currentId = n.id;
+          loadToEditor(n);
+        });
+      });
+
+      // İlk notu otomatik yükle
+      if (!currentId && filtered[0]) {
+        currentId = filtered[0].id;
+        loadToEditor(filtered[0]);
+      }
+    }
+
+    function loadToEditor(note) {
+      el.title.value = note.title || '';
+      el.content.value = note.content || '';
+      el.tags.value = (note.tags || []).join(', ');
+      el.status.textContent = 'Hazır';
+    }
+
+    function clearEditor() {
+      el.title.value = '';
+      el.content.value = '';
+      el.tags.value = '';
+      el.status.textContent = 'Hazır';
+    }
+
+    function saveNotes() {
+      localStorage.setItem(storeKey, JSON.stringify(notes));
+    }
+
+    function loadNotes() {
+      try {
+        const raw = localStorage.getItem(storeKey);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.warn('Load error', e);
+        return [];
+      }
+    }
+
+    function formatDate(ts) {
+      const d = new Date(ts);
+      return d.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function escapeHTML(s) {
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // Dışa aktar / içe aktar
+    el.exportJSON.addEventListener('click', () => {
+      downloadFile('notlar.json', JSON.stringify(notes, null, 2), 'application/json');
+    });
+    el.importJSON.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error('Geçersiz format');
+        notes = data;
+        saveNotes();
+        renderList();
+        flash('JSON içe aktarıldı');
+      } catch (err) {
+        alert('JSON okunamadı: ' + err.message);
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    // TXT / PDF
+    el.exportTXT.addEventListener('click', () => {
+      if (!currentId) return;
+      const n = notes.find(x => x.id === currentId);
+      const txt = `# ${n.title}\n\nEtiketler: ${(n.tags||[]).join(', ')}\nGüncellendi: ${formatDate(n.updatedAt)}\n\n${n.content}`;
+      downloadFile(`${slugify(n.title)}.txt`, txt, 'text/plain');
+    });
+
+    el.exportPDF.addEventListener('click', () => {
+      if (!currentId) return;
+      const n = notes.find(x => x.id === currentId);
+      const w = window.open('', '_blank');
+      const html = `
+        <html><head><title>${escapeHTML(n.title)}</title></head>
+        <body>
+          <h1>${escapeHTML(n.title)}</h1>
+          <p><strong>Etiketler:</strong> ${(n.tags||[]).map(escapeHTML).join(', ')}</p>
+          <p><strong>Güncellendi:</strong> ${formatDate(n.updatedAt)}</p>
+          <pre style="white-space:pre-wrap;font-family:inherit;">${escapeHTML(n.content)}</pre>
+          <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }<\/script>
+        </body></html>`;
+      w.document.write(html);
+      w.document.close();
+    });
+
+    function slugify(s) {
+      return (s || 'not').toLowerCase()
+        .replace(/[çÇ]/g,'c').replace(/[ğĞ]/g,'g').replace(/[ıİ]/g,'i').replace(/[öÖ]/g,'o').replace(/[şŞ]/g,'s').replace(/[üÜ]/g,'u')
+        .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    }
+
+    function downloadFile(name, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // İlk kullanım için örnek not
+    if (notes.length === 0) {
+      notes = [{
+        id: crypto.randomUUID(),
+        title: 'Hoş geldin',
+        content: 'Burada notlarını oluşturabilir, etiketleyebilir ve arayabilirsin.\n\nİpuçları:\n- Etiketleri virgülle ayır.\n- Arama kutusundan başlık/içerik/etiketlerde ara.\n- JSON ile yedek al, TXT/PDF olarak indir.',
+        tags: ['ipucu','başlangıç'],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }];
+      saveNotes();
+      renderList();
+    }
+
+    // Küçük bildirim
+    function flash(msg) {
+      el.status.textContent = msg;
+      setTimeout(() => el.status.textContent = 'Hazır', 1500);
+    }
+  </script>
+</body>
+</html>
